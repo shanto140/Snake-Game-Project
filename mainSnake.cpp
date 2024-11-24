@@ -342,16 +342,6 @@ bool loadMedia(){
     }
   
 
-    /*surface = loadSurface("./images/tail.png");
-    tailTexture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-    if (tailTexture == nullptr){
-        printf("Failed to load PNG image!\n");
-        return false;
-    }
-    */
-   
-
     surface = loadSurface("./images/body.png");
     bodyTexture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
