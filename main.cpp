@@ -15,6 +15,7 @@ const int SCREEN_HEIGHT = 600;
 const int RECTANGLE_SIZE = 22;
 const int FOOD_SIZE = 25;
 int SNAKE_SPEED = 170;
+int obstacleUpdate=0;
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
@@ -23,6 +24,7 @@ TTF_Font *font = NULL;
 
 // declaring texture
 SDL_Texture *bcgroundTexture = NULL;
+SDL_Texture  *levelTexture=NULL;
 SDL_Texture *bonusTexture = NULL;
 SDL_Texture *foodTexture = NULL;
 SDL_Texture *tailTexture = NULL;
@@ -45,18 +47,21 @@ SDL_Rect highScoreButtonRect = {SCREEN_WIDTH / 2 - 115, 332, 170, 35};
 SDL_Rect level1HighScoreRect = {SCREEN_WIDTH / 2 - 110, 370, 150, 25};
 SDL_Rect level2HighScoreRect = {SCREEN_WIDTH / 2 - 110, 395, 150, 25};
 SDL_Rect exitButtonRect = {SCREEN_WIDTH / 2 - 115, 380, 170, 35};
-SDL_Rect level1ButtonRect = {SCREEN_WIDTH / 2 - 30, 340, 150, 35};
-SDL_Rect level2ButtonRect = {SCREEN_WIDTH / 2, 390, 150, 35};
+SDL_Rect level1ButtonRect = {135, 292, 550, 90};
+SDL_Rect level2ButtonRect = {135, 405, 550, 90};
 SDL_Rect backHomeButtonRect = {330, 300, 140, 40};
 SDL_Rect pauseAndContinueButtonRect = {SCREEN_WIDTH / 2 - 25, SCREEN_HEIGHT - 20, 20, 20};
 
+
 // obstacle and boundary rectangle for snake
-SDL_Rect obstacle1Rect = {SCREEN_WIDTH / 3, SCREEN_HEIGHT / 4, SCREEN_WIDTH / 35, SCREEN_HEIGHT / 2};
-SDL_Rect obstacle2Rect = {(SCREEN_WIDTH / 3) * 2, SCREEN_HEIGHT / 4, SCREEN_WIDTH / 35, SCREEN_HEIGHT / 2};
+SDL_Rect obstacle1Rect = {SCREEN_WIDTH / 3, SCREEN_HEIGHT / 4-80, SCREEN_WIDTH / 35, SCREEN_HEIGHT / 2};
+SDL_Rect obstacle2Rect = {(SCREEN_WIDTH / 3) * 2, SCREEN_HEIGHT / 4+80, SCREEN_WIDTH / 35, SCREEN_HEIGHT / 2};
 SDL_Rect obstacle3Rect = {SCREEN_WIDTH / 3, SCREEN_HEIGHT / 4 - SCREEN_WIDTH / 35, SCREEN_WIDTH / 6, SCREEN_WIDTH / 35};
 SDL_Rect obstacle4Rect = {(SCREEN_WIDTH / 3) * 2, SCREEN_HEIGHT / 4 - SCREEN_WIDTH / 35, SCREEN_WIDTH / 6, SCREEN_WIDTH / 35};
 SDL_Rect obstacle5Rect = {SCREEN_WIDTH / 3 - SCREEN_WIDTH / 6 + SCREEN_WIDTH / 35, (SCREEN_HEIGHT / 4) * 3, SCREEN_WIDTH / 6, SCREEN_WIDTH / 35};
 SDL_Rect obstacle6Rect = {(SCREEN_WIDTH / 3) * 2 - SCREEN_WIDTH / 6 + SCREEN_WIDTH / 35, (SCREEN_HEIGHT / 4) * 3, SCREEN_WIDTH / 6, SCREEN_WIDTH / 35};
+
+
 
 int boundaryWidth = 20;
 SDL_Rect upperBoundaryRect = {0, 0, SCREEN_WIDTH, boundaryWidth};
@@ -89,6 +94,9 @@ bool bonusFoodActive = false;
 
 // co-ordinate of bonus food and regular food
 int bonusFoodX = 0, bonusFoodY = 0, foodX = 40, foodY = 40;
+
+//removing obstacle direction
+int positive=1,negative=0;
 
 Uint32 bonusFoodStartTime = 0;
 bool running = false;
@@ -182,7 +190,7 @@ void makeBonusFood(){
 void snakeSegmentInitialize(){
     segment.push_back({RECTANGLE_SIZE * 6, SCREEN_HEIGHT / 2, 0.0}); // Head
     segment.push_back({RECTANGLE_SIZE * 5, SCREEN_HEIGHT / 2, 0.0}); // Body
-   // segment.push_back({RECTANGLE_SIZE * 4, SCREEN_HEIGHT / 2, 0.0}); // Tail
+
 }
 
 void loadHighScore(){
@@ -221,7 +229,7 @@ void updateHighScore(){
     }
 }
 
-bool initializing(){
+bool initializing()    {             
     if (SDL_Init(SDL_INIT_VIDEO) != 0){
         std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
         return 0;
@@ -252,7 +260,7 @@ bool initializing(){
         return 0;
     }
     else{
-        font = TTF_OpenFont("./textf/NexaRustHandmade-Trial-Extended.otf", 28); // Make sure to replace with the path to your font
+        font = TTF_OpenFont("./textf/NexaRustHandmade-Trial-Extended.otf", 28); 
         if (font == nullptr){
             TTF_Quit();
             SDL_DestroyRenderer(renderer);
@@ -321,6 +329,14 @@ bool loadMedia(){
     coverTexture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     if (coverTexture == nullptr){
+        printf("Failed to load PNG image!\n");
+        return false;
+    }
+
+    surface = loadSurface("./images/level.png");
+    levelTexture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    if (levelTexture == nullptr){
         printf("Failed to load PNG image!\n");
         return false;
     }
@@ -630,22 +646,21 @@ void render(){
     }
 
     if (state == PLAYING){
-        SDL_RenderCopy(renderer, bcgroundTexture, nullptr, nullptr);
-
+       
         if (!level1 && !level2){
-
-            if (Mix_PlayingMusic()){
+            
+            SDL_RenderCopy(renderer, levelTexture, nullptr, nullptr);
+            if(Mix_PlayingMusic()){
                 Mix_PauseMusic();
             }
-            
-            SDL_RenderCopy(renderer, playButtonTexture, nullptr, &playButtonRect);
-            SDL_RenderCopy(renderer, level1ButtonTexture, nullptr, &level1ButtonRect);
-            SDL_RenderCopy(renderer, level2ButtonTexture, nullptr, &level2ButtonRect);
 
             SDL_RenderPresent(renderer);
         }
 
         else if (level1 == true || level2 == true){
+
+            SDL_RenderCopy(renderer, bcgroundTexture, nullptr, nullptr);
+
 
             if (currentMusic != bcgroundMusic || Mix_PausedMusic() != 0){
                 currentMusic = bcgroundMusic;
@@ -660,6 +675,25 @@ void render(){
                 for (int i = 0; i < 6; i++){
                     SDL_RenderFillRect(renderer, &obstacle[i]);
                 }
+
+               /* if(positive&&obstacleUpdate<200){
+                    obstacleUpdate+=5;
+                    if(obstacleUpdate==200){
+                        negative=1;
+                        positive=0;
+                    }
+                }
+                else if(negative && obstacleUpdate>0){
+                     obstacleUpdate-=5;
+                    if(obstacleUpdate==0){
+                        positive=1;
+                        negative=0;
+                    }
+                }
+               SDL_Rect randomObstacle = {200+obstacleUpdate,50,SCREEN_HEIGHT / 2,SCREEN_WIDTH / 35};
+               SDL_RenderFillRect(renderer, &randomObstacle);
+               */
+
             }
 
             else if (level2){
@@ -754,6 +788,9 @@ void render(){
             // Check if snake bites itself or collision Obstacle
 
             if (checkSelfBite(segment) || checkCollisionWithObstacle(segment[0])){
+                
+               
+                updateHighScore();
                 state = GAME_OVER;
                 segment.clear();
                 snakeSegmentInitialize();
@@ -765,13 +802,15 @@ void render(){
                 dy = 0;
             }
 
+
+
+
+
             // Render the score
             SDL_Color Color = {150, 220, 102, 255};
             SDL_Rect Rect = {360, 2, 80, 20};
             std::string scoreText = "SCORE: " + std::to_string(score);
             RenderText(renderer, font, scoreText, Rect, Color);
-
-            updateHighScore();
         }
     }
 
